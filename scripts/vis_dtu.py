@@ -7,7 +7,15 @@ import mathutils
 from argparse import ArgumentParser
 from pathlib import Path
 
-BG_K = ()
+trans_configs = {
+    24: [-1.3, 0.1, 0.8],
+    37: [-1.6, 0.2, 0.6],
+    40: [-1.2, 0.1, 0.7],
+    55: [-1.2, 0.1, 0.8],
+    63: [-0.8, 0.2, 0.6],
+    65: [-1.0, 0.0, 0.6],
+    69: [-1.2, 0.0, 0.8],
+}
 
 def search_for_max_iter(folder):
     saved_iters = [int(fname.split("_")[-1]) for fname in os.listdir(folder)]
@@ -184,8 +192,8 @@ if __name__ == "__main__":
     parser.add_argument("--anim_ref_view", default=0, type=int)
     parser.add_argument("--anim_debug", action='store_true')
     parser.add_argument("--anim_trans", nargs=3, type=float, default=[0.0, 0.0, 0.0])
-    parser.add_argument("--report_still", default=-1, type=int)
-    parser.add_argument("--report_trans", nargs=3, type=float, default=[-1.3, 0.1, 0.8])
+    parser.add_argument("--report_still", default=23, type=int)
+    parser.add_argument("--report_config", default=24, type=int)
     args = parser.parse_args()
 
     model_dir = Path(args.model).resolve()
@@ -217,7 +225,7 @@ if __name__ == "__main__":
         light.energy = 75.0
 
         ref_view = views[args.report_still]
-        mesh.location += mathutils.Vector(args.report_trans)
+        mesh.location += mathutils.Vector(trans_configs[args.report_config])
 
         R = ref_view["rotation"]
         T = ref_view["position"]
