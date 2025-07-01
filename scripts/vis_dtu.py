@@ -204,9 +204,9 @@ if __name__ == "__main__":
     mat_nodes = mat.node_tree.nodes
 
     if args.report_still >= 0:
-        scene.render.film_transparent = False
+        scene.render.film_transparent = True
         scene.render.image_settings.file_format = 'PNG'
-        scene.render.image_settings.color_mode = 'RGB'
+        scene.render.image_settings.color_mode = 'RGBA'
         scene.render.image_settings.color_depth = '8'
         scene.render.resolution_x = 600
         scene.render.resolution_y = 600
@@ -214,7 +214,7 @@ if __name__ == "__main__":
 
         bg_node.inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)
         bsdf.inputs['Base Color'].default_value = (0.7, 0.7, 0.7, 1)
-        light.energy = 50.0
+        light.energy = 75.0
 
         ref_view = views[args.report_still]
         mesh.location += mathutils.Vector(args.report_trans)
