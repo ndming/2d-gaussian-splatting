@@ -211,6 +211,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     render_pkg = renderFunc(viewpoint, scene.gaussians, *renderArgs)
                     image = torch.clamp(render_pkg["render"], 0.0, 1.0).to("cuda")
                     gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
+                    alpha_mask = viewpoint.gt_alpha_mask.cuda() > 0.5
                     if tb_writer and (idx < 5):
                         from utils.general_utils import colormap
                         depth = render_pkg["surf_depth"]
@@ -222,8 +223,9 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
                         try:
                             rend_alpha = render_pkg['rend_alpha']
-                            rend_normal = render_pkg["rend_normal"] * 0.5 + 0.5
+                            rend_normal = convert_normal_for_save(render_pkg['rend_normal'], viewpoint)
                             surf_normal = render_pkg["surf_normal"] * 0.5 + 0.5
+                            rend_normal = torch.where(alpha_mask, rend_normal, 1.0)
                             tb_writer.add_images(config['name'] + "_view_{}/rend_normal".format(viewpoint.image_name), rend_normal[None], global_step=iteration)
                             tb_writer.add_images(config['name'] + "_view_{}/surf_normal".format(viewpoint.image_name), surf_normal[None], global_step=iteration)
                             tb_writer.add_images(config['name'] + "_view_{}/rend_alpha".format(viewpoint.image_name), rend_alpha[None], global_step=iteration)
@@ -248,6 +250,22 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
 
         torch.cuda.empty_cache()
+
+def convert_normal_for_save(normal_map, viewpoint):
+    # normal_map is a tensor of shape (3, H, W)
+
+    # Flatten and normalize normals
+    normals = normal_map.permute(1, 2, 0).view(-1, 3).clone() # (H * W, 3)
+    normals = normals @ viewpoint.world_view_transform[:3, :3]
+
+    # Apply Y-up and Z-back coordinate fix
+    T = torch.tensor([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=normals.dtype, device=normals.device)
+    normals = normals @ T.T
+
+    # Adjust range
+    normals = normals * 0.5 + 0.5 # [-1, 1] -> [0, 1]
+    H, W = viewpoint.image_height, viewpoint.image_width
+    return normals.reshape(H, W, 3).permute(2, 0, 1)
 
 if __name__ == "__main__":
     # Set up command line argument parser
